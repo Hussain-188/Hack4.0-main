@@ -182,17 +182,100 @@ Generate only the mermaid code, no explanations.`;
     console.error("Error generating flowchart:", error);
 
     // Return a fallback flowchart if AI fails
-    if (error.message.includes("overloaded")) {
-      console.log("Returning fallback flowchart due to API overload");
-      return `graph TD
-    START((Document Processed)) --> EXTRACT[Text Extracted Successfully]
-    EXTRACT --> NOTE[AI Service Temporarily Unavailable]
-    NOTE --> RETRY[Please Try Again Later]
-    RETRY --> END((Process Complete))`;
+    if (
+      error.message.includes("overloaded") ||
+      error.message.includes("quota") ||
+      error.message.includes("429")
+    ) {
+      console.log("Returning fallback flowchart due to API quota/overload");
+
+      // Create a simple generic flowchart based on document type and content
+      return generateFallbackFlowchart(extractedText);
     }
 
     throw new Error("Failed to generate flowchart");
   }
+}
+
+// Generate a basic flowchart when AI service is unavailable
+function generateFallbackFlowchart(text) {
+  const lowerText = text.toLowerCase();
+
+  // Detect document type and create appropriate flowchart
+  if (
+    lowerText.includes("registration") ||
+    lowerText.includes("sign up") ||
+    lowerText.includes("account")
+  ) {
+    return `graph TD
+    START((Start Registration)) --> INPUT[User Enters Information]
+    INPUT --> VALIDATE{Validate Input}
+    VALIDATE -->|Valid| CREATE[Create Account]
+    VALIDATE -->|Invalid| ERROR[Show Error]
+    ERROR --> INPUT
+    CREATE --> CONFIRM[Send Confirmation]
+    CONFIRM --> SUCCESS[Registration Complete]
+    SUCCESS --> END((End))`;
+  }
+
+  if (
+    lowerText.includes("login") ||
+    lowerText.includes("authentication") ||
+    lowerText.includes("sign in")
+  ) {
+    return `graph TD
+    START((Start Login)) --> ENTER[Enter Credentials]
+    ENTER --> CHECK{Verify Credentials}
+    CHECK -->|Valid| SUCCESS[Login Successful]
+    CHECK -->|Invalid| ERROR[Login Failed]
+    ERROR --> ENTER
+    SUCCESS --> DASHBOARD[Redirect to Dashboard]
+    DASHBOARD --> END((End))`;
+  }
+
+  if (
+    lowerText.includes("order") ||
+    lowerText.includes("purchase") ||
+    lowerText.includes("payment")
+  ) {
+    return `graph TD
+    START((Start Order)) --> SELECT[Select Products]
+    SELECT --> CART[Add to Cart]
+    CART --> CHECKOUT[Proceed to Checkout]
+    CHECKOUT --> PAYMENT[Process Payment]
+    PAYMENT --> CONFIRM[Order Confirmation]
+    CONFIRM --> SHIP[Ship Products]
+    SHIP --> END((Order Complete))`;
+  }
+
+  if (
+    lowerText.includes("process") ||
+    lowerText.includes("workflow") ||
+    lowerText.includes("procedure")
+  ) {
+    return `graph TD
+    START((Start Process)) --> STEP1[Initial Step]
+    STEP1 --> STEP2[Process Data]
+    STEP2 --> DECISION{Decision Point}
+    DECISION -->|Yes| STEP3[Continue Process]
+    DECISION -->|No| STEP4[Alternative Path]
+    STEP3 --> END1((Complete))
+    STEP4 --> END2((Alternative End))`;
+  }
+
+  // Generic fallback for any document
+  return `graph TD
+    START((Document Analysis)) --> EXTRACT[Text Extracted: ${
+      Math.round(text.length / 100) * 100
+    } characters]
+    EXTRACT --> CONTENT[Content Processed]
+    CONTENT --> NOTE[AI Service Quota Exceeded]
+    NOTE --> INFO[Free Tier: 50 requests/day limit reached]
+    INFO --> SOLUTION[Solutions Available]
+    SOLUTION --> OPTION1[Wait 24 hours for quota reset]
+    SOLUTION --> OPTION2[Upgrade to paid API plan]
+    OPTION1 --> END1((Try Again Tomorrow))
+    OPTION2 --> END2((Upgrade Account))`;
 }
 
 // POST endpoint for file upload and flowchart generation

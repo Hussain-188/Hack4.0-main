@@ -62,13 +62,35 @@ const DocumentAnalysis: React.FC = () => {
       const response = await generateFlowchart(selectedFile);
       setMermaidCode(response.mermaidCode);
       setExtractedText(response.extractedText);
-      toast.success("Flowchart generated successfully!");
+
+      // Check if it's a fallback flowchart
+      if (
+        response.mermaidCode.includes("AI Service Quota Exceeded") ||
+        response.mermaidCode.includes("Quota Exceeded")
+      ) {
+        toast("API quota exceeded - showing fallback flowchart", {
+          icon: "⚠️",
+          style: {
+            borderRadius: "10px",
+            background: "#fbbf24",
+            color: "#1f2937",
+          },
+        });
+      } else {
+        toast.success("Flowchart generated successfully!");
+      }
     } catch (err) {
       console.error("Flowchart generation error:", err);
       let errorMessage = "An unexpected error occurred";
 
       if (err instanceof Error) {
-        if (err.message.includes("overloaded") || err.message.includes("503")) {
+        if (err.message.includes("quota") || err.message.includes("429")) {
+          errorMessage =
+            "API quota exceeded (50 requests/day limit). The flowchart will use a fallback template. Wait 24 hours or upgrade to a paid plan.";
+        } else if (
+          err.message.includes("overloaded") ||
+          err.message.includes("503")
+        ) {
           errorMessage =
             "AI service is currently overloaded. Please try again in a few moments.";
         } else if (err.message.includes("Cannot connect")) {
@@ -283,7 +305,44 @@ const DocumentAnalysis: React.FC = () => {
           {/* Setup Instructions */}
           <div className="bg-orange-50 rounded-xl p-8">
             <h3 className="text-xl font-medium text-orange-900 mb-4">
-              ⚙️ Setup Required
+              ⚙️ API Quota Information
+            </h3>
+            <div className="text-orange-800 space-y-3">
+              <p className="font-medium">Current API Status:</p>
+              <div className="bg-orange-100 p-4 rounded-lg">
+                <p className="text-sm">
+                  <strong>Free Tier Limit:</strong> 50 requests per day per
+                  model
+                </p>
+                <p className="text-sm mt-1">
+                  <strong>Status:</strong>{" "}
+                  {serverStatus === "online"
+                    ? "✅ Server Online"
+                    : "❌ Server Offline"}
+                </p>
+                <p className="text-sm mt-1">
+                  <strong>Fallback Mode:</strong> When quota is exceeded, the
+                  system generates template-based flowcharts
+                </p>
+              </div>
+              <p className="text-sm mt-3">
+                <strong>If you see quota errors:</strong>
+              </p>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li>Wait 24 hours for quota reset (free tier limitation)</li>
+                <li>
+                  The system will still generate useful flowcharts using
+                  templates
+                </li>
+                <li>Consider upgrading to paid API plan for unlimited usage</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Setup Instructions */}
+          <div className="bg-gray-50 rounded-xl p-8">
+            <h3 className="text-xl font-medium text-gray-900 mb-4">
+              🔧 Additional Setup
             </h3>
             <div className="text-orange-800 space-y-3">
               <p className="font-medium">

@@ -16,14 +16,18 @@ import AIRoadmapSection from "./AIRoadmapSection";
 import AIPracticeSection from "./AIPracticeSection";
 import DocumentAnalysis from "./DocumentAnalysis";
 import { assessmentAPI } from "../../services/api";
-import { Assessment } from "../../types";
+import { Assessment, AssessmentResult } from "../../types";
 import toast from "react-hot-toast";
 
 const StudentDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [activeSection, setActiveSection] = useState("dashboard");
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [assessmentResults, setAssessmentResults] = useState<
+    AssessmentResult[]
+  >([]);
   const [loading, setLoading] = useState(false);
+  const [resultsLoading, setResultsLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [assessmentFilter, setAssessmentFilter] = useState<
     "ongoing" | "past" | "future"
@@ -41,6 +45,7 @@ const StudentDashboard: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchAssessments();
+      fetchAssessmentResults();
     }
 
     // Update current time every minute
@@ -60,6 +65,19 @@ const StudentDashboard: React.FC = () => {
       toast.error("Failed to fetch assessments");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAssessmentResults = async () => {
+    setResultsLoading(true);
+    try {
+      const response = await assessmentAPI.getStudentResults(user!.id);
+      setAssessmentResults(response.data);
+    } catch (error) {
+      console.error("Failed to fetch assessment results:", error);
+      // Don't show error toast as results might not exist yet
+    } finally {
+      setResultsLoading(false);
     }
   };
 
@@ -107,7 +125,7 @@ const StudentDashboard: React.FC = () => {
     });
   };
 
-  // Generate activity tracker data (12 weeks, 7 days each)
+  // Generate activity tracker data based on real assessment results (12 weeks, 7 days each)
   const generateActivityData = () => {
     const weeks = 12;
     const daysPerWeek = 7;
@@ -122,34 +140,26 @@ const StudentDashboard: React.FC = () => {
 
         // Check if user has activity on this date based on completed assessments
         const dateStr = date.toISOString().split("T")[0];
-        const hasActivity = assessments.some((assessment) => {
-          const assessmentEndDate = new Date(assessment.endTime)
+        const activitiesOnDate = assessmentResults.filter((result) => {
+          const resultDate = new Date(result.completedAt)
             .toISOString()
             .split("T")[0];
-          const status = getAssessmentStatus(assessment);
-          return assessmentEndDate === dateStr && status.status === "PAST";
+          return resultDate === dateStr;
         });
 
-        // Activity level based on real assessment data
-        let activityLevel = 0;
-        if (hasActivity) {
-          // Count activities on this date
-          const activitiesCount = assessments.filter((assessment) => {
-            const assessmentEndDate = new Date(assessment.endTime)
-              .toISOString()
-              .split("T")[0];
-            const status = getAssessmentStatus(assessment);
-            return assessmentEndDate === dateStr && status.status === "PAST";
-          }).length;
-
-          activityLevel = Math.min(activitiesCount, 4); // Cap at 4 for visual consistency
-        }
+        // Activity level based on real assessment results
+        const activityLevel = Math.min(activitiesOnDate.length, 4); // Cap at 4 for visual consistency
 
         weekData.push({
           date: dateStr,
           level: activityLevel,
           count: activityLevel,
-          activities: hasActivity ? "Assessment completed" : "No activity",
+          activities:
+            activitiesOnDate.length > 0
+              ? `${activitiesOnDate.length} assessment${
+                  activitiesOnDate.length > 1 ? "s" : ""
+                } completed`
+              : "No activity",
         });
       }
       activities.push(weekData);
@@ -172,27 +182,25 @@ const StudentDashboard: React.FC = () => {
       default:
         return "bg-gray-100 border border-gray-200";
     }
-  };
-
-  // Calculate current and best streaks based on real assessment data
+  }; // Calculate current and best streaks based on real assessment results
   const calculateStreaks = () => {
-    const pastAssessments = getPastAssessments();
-
-    if (pastAssessments.length === 0) {
+    if (assessmentResults.length === 0) {
       return { currentStreak: 0, bestStreak: 0 };
     }
 
-    // Sort assessments by end date
-    const sortedAssessments = pastAssessments.sort(
-      (a, b) => new Date(a.endTime).getTime() - new Date(b.endTime).getTime()
-    );
+    // Sort assessment results by completion date
+    const sortedResults = assessmentResults
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+      );
 
     // Get unique dates when assessments were completed
     const completionDates = [
       ...new Set(
-        sortedAssessments.map(
-          (assessment) =>
-            new Date(assessment.endTime).toISOString().split("T")[0]
+        sortedResults.map(
+          (result) => new Date(result.completedAt).toISOString().split("T")[0]
         )
       ),
     ].sort();
@@ -251,11 +259,9 @@ const StudentDashboard: React.FC = () => {
     return { currentStreak, bestStreak };
   };
 
-  // Calculate real performance metrics based on assessment data
+  // Calculate real performance metrics based on actual assessment results
   const calculatePerformanceMetrics = () => {
-    const completedAssessments = getPastAssessments();
-
-    if (completedAssessments.length === 0) {
+    if (assessmentResults.length === 0) {
       return {
         successRate: 0,
         averageScore: 0,
@@ -263,28 +269,30 @@ const StudentDashboard: React.FC = () => {
       };
     }
 
-    // Calculate success rate based on assessment completion patterns
-    // In a real app, this would come from actual score data
-    const successfulAssessments = completedAssessments.filter((_, index) => {
-      // Simulate realistic success pattern (80-90% success rate)
-      const simulatedScore =
-        70 + (index % 4) * 8 + Math.floor(Math.random() * 15);
-      return simulatedScore >= 70;
+    // Calculate success rate based on actual scores (70% or higher is successful)
+    const successfulAssessments = assessmentResults.filter((result) => {
+      const assessment = assessments.find((a) => a.id === result.assessmentId);
+      if (!assessment) return false;
+      const percentage = (result.score / assessment.questions.length) * 100;
+      return percentage >= 70;
     });
     const successRate = Math.round(
-      (successfulAssessments.length / completedAssessments.length) * 100
+      (successfulAssessments.length / assessmentResults.length) * 100
     );
 
-    // Calculate average score based on realistic scoring patterns
-    const totalScore = completedAssessments.reduce((sum, assessment) => {
-      // Simulate scores based on assessment patterns with some variation
-      const baseScore =
-        75 + (assessment.title.length % 3) * 5 + Math.floor(Math.random() * 15);
-      return sum + Math.min(Math.max(baseScore, 60), 100); // Keep scores between 60-100
+    // Calculate average score based on actual results
+    const totalPercentage = assessmentResults.reduce((sum, result) => {
+      const assessment = assessments.find((a) => a.id === result.assessmentId);
+      if (!assessment) return sum;
+      const percentage = (result.score / assessment.questions.length) * 100;
+      return sum + percentage;
     }, 0);
-    const averageScore = Math.round(totalScore / completedAssessments.length);
+    const averageScore = Math.round(totalPercentage / assessmentResults.length);
 
-    // Calculate completion rate
+    // Calculate completion rate based on available assessments
+    const completedAssessments = getPastAssessments().filter((assessment) =>
+      assessmentResults.some((result) => result.assessmentId === assessment.id)
+    );
     const completionRate =
       assessments.length > 0
         ? Math.round((completedAssessments.length / assessments.length) * 100)
@@ -548,76 +556,100 @@ const StudentDashboard: React.FC = () => {
                     <h3 className="text-lg font-bold text-gray-900 mb-4">
                       Performance Overview
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {(() => {
-                        const metrics = calculatePerformanceMetrics();
-                        return (
-                          <>
-                            <div className="text-center">
-                              <div className="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center mb-3">
-                                <span className="text-2xl font-bold text-green-600">
-                                  {metrics.successRate}%
-                                </span>
+                    {resultsLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-gray-600 mt-2 text-sm">
+                          Loading performance data...
+                        </p>
+                      </div>
+                    ) : assessmentResults.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <span className="text-2xl">📊</span>
+                        </div>
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                          No Performance Data Yet
+                        </h4>
+                        <p className="text-xs text-gray-600">
+                          Complete some assessments to see your performance
+                          metrics here.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {(() => {
+                          const metrics = calculatePerformanceMetrics();
+                          return (
+                            <>
+                              <div className="text-center">
+                                <div className="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center mb-3">
+                                  <span className="text-2xl font-bold text-green-600">
+                                    {metrics.successRate}%
+                                  </span>
+                                </div>
+                                <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                                  Success Rate
+                                </h4>
+                                <p className="text-xs text-gray-600">
+                                  Assessments passed (≥70%)
+                                </p>
+                                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                  <div
+                                    className="bg-green-500 h-2 rounded-full transition-all duration-500"
+                                    style={{ width: `${metrics.successRate}%` }}
+                                  ></div>
+                                </div>
                               </div>
-                              <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                                Success Rate
-                              </h4>
-                              <p className="text-xs text-gray-600">
-                                Assessments passed
-                              </p>
-                              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                                <div
-                                  className="bg-green-500 h-2 rounded-full transition-all duration-500"
-                                  style={{ width: `${metrics.successRate}%` }}
-                                ></div>
-                              </div>
-                            </div>
 
-                            <div className="text-center">
-                              <div className="w-20 h-20 mx-auto rounded-full bg-blue-100 flex items-center justify-center mb-3">
-                                <span className="text-2xl font-bold text-blue-600">
-                                  {metrics.averageScore}%
-                                </span>
+                              <div className="text-center">
+                                <div className="w-20 h-20 mx-auto rounded-full bg-blue-100 flex items-center justify-center mb-3">
+                                  <span className="text-2xl font-bold text-blue-600">
+                                    {metrics.averageScore}%
+                                  </span>
+                                </div>
+                                <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                                  Average Score
+                                </h4>
+                                <p className="text-xs text-gray-600">
+                                  Overall performance
+                                </p>
+                                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                  <div
+                                    className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                                    style={{
+                                      width: `${metrics.averageScore}%`,
+                                    }}
+                                  ></div>
+                                </div>
                               </div>
-                              <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                                Average Score
-                              </h4>
-                              <p className="text-xs text-gray-600">
-                                Overall performance
-                              </p>
-                              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                                <div
-                                  className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                                  style={{ width: `${metrics.averageScore}%` }}
-                                ></div>
-                              </div>
-                            </div>
 
-                            <div className="text-center">
-                              <div className="w-20 h-20 mx-auto rounded-full bg-purple-100 flex items-center justify-center mb-3">
-                                <span className="text-2xl font-bold text-purple-600">
-                                  {metrics.completionRate}%
-                                </span>
+                              <div className="text-center">
+                                <div className="w-20 h-20 mx-auto rounded-full bg-purple-100 flex items-center justify-center mb-3">
+                                  <span className="text-2xl font-bold text-purple-600">
+                                    {metrics.completionRate}%
+                                  </span>
+                                </div>
+                                <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                                  Completion Rate
+                                </h4>
+                                <p className="text-xs text-gray-600">
+                                  Tasks completed
+                                </p>
+                                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                  <div
+                                    className="bg-purple-500 h-2 rounded-full transition-all duration-500"
+                                    style={{
+                                      width: `${metrics.completionRate}%`,
+                                    }}
+                                  ></div>
+                                </div>
                               </div>
-                              <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                                Completion Rate
-                              </h4>
-                              <p className="text-xs text-gray-600">
-                                Tasks completed
-                              </p>
-                              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                                <div
-                                  className="bg-purple-500 h-2 rounded-full transition-all duration-500"
-                                  style={{
-                                    width: `${metrics.completionRate}%`,
-                                  }}
-                                ></div>
-                              </div>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -731,17 +763,18 @@ const StudentDashboard: React.FC = () => {
                       {Array.from({ length: 7 }, (_, i) => {
                         const date = new Date();
                         date.setDate(date.getDate() - (6 - i));
-                        const hasActivity = assessments.some((assessment) => {
-                          const assessmentEndDate = new Date(assessment.endTime)
-                            .toISOString()
-                            .split("T")[0];
-                          const dateStr = date.toISOString().split("T")[0];
-                          const status = getAssessmentStatus(assessment);
-                          return (
-                            assessmentEndDate === dateStr &&
-                            status.status === "PAST"
-                          );
-                        });
+                        const dateStr = date.toISOString().split("T")[0];
+
+                        // Check for real assessment results on this date
+                        const resultsOnDate = assessmentResults.filter(
+                          (result) => {
+                            const resultDate = new Date(result.completedAt)
+                              .toISOString()
+                              .split("T")[0];
+                            return resultDate === dateStr;
+                          }
+                        );
+                        const hasActivity = resultsOnDate.length > 0;
 
                         return (
                           <div key={i} className="flex flex-col items-center">
@@ -751,6 +784,13 @@ const StudentDashboard: React.FC = () => {
                                   ? "bg-green-500 text-white"
                                   : "bg-gray-100 text-gray-400"
                               }`}
+                              title={
+                                hasActivity
+                                  ? `${resultsOnDate.length} assessment${
+                                      resultsOnDate.length > 1 ? "s" : ""
+                                    } completed`
+                                  : "No activity"
+                              }
                             >
                               {date.getDate()}
                             </div>
