@@ -106,6 +106,8 @@ export const chatAPI = {
   getMessages: (userId1: string, userId2: string) =>
     api.get(`/chat/messages/${userId1}/${userId2}`),
   findUser: (query: string) => api.get(`/users/search?q=${query}`),
+  getConversations: (userId: string) =>
+    api.get(`/chat/conversations/${userId}`),
 };
 
 export const aiAPI = {
@@ -115,6 +117,30 @@ export const aiAPI = {
     api.post("/ai/explain", { question, correctAnswer }),
   evaluateAnswers: (assessmentData: any) =>
     api.post("/ai/evaluate", assessmentData),
+};
+
+// Task API
+export const taskAPI = {
+  create: (studentId: string, taskData: any) =>
+    api.post(`/tasks?studentId=${studentId}`, taskData),
+  getAll: (studentId: string) => api.get(`/tasks/student/${studentId}`),
+  getByStatus: (studentId: string, status: string) =>
+    api.get(`/tasks/student/${studentId}/status/${status}`),
+  getById: (taskId: string, studentId: string) =>
+    api.get(`/tasks/${taskId}?studentId=${studentId}`),
+  update: (taskId: string, studentId: string, taskData: any) =>
+    api.put(`/tasks/${taskId}?studentId=${studentId}`, taskData),
+  delete: (taskId: string, studentId: string) =>
+    api.delete(`/tasks/${taskId}?studentId=${studentId}`),
+  markCompleted: (taskId: string, studentId: string) =>
+    api.put(`/tasks/${taskId}/complete?studentId=${studentId}`),
+  updateStatus: (taskId: string, studentId: string, status: string) =>
+    api.put(`/tasks/${taskId}/status?studentId=${studentId}&status=${status}`),
+  getStats: (studentId: string) => api.get(`/tasks/student/${studentId}/stats`),
+  getOverdue: (studentId: string) =>
+    api.get(`/tasks/student/${studentId}/overdue`),
+  getDueSoon: (studentId: string) =>
+    api.get(`/tasks/student/${studentId}/due-soon`),
 };
 
 // Document Analysis API Types

@@ -2,7 +2,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  role: 'STUDENT' | 'PROFESSOR' | 'ALUMNI';
+  role: "STUDENT" | "PROFESSOR" | "ALUMNI";
   isVerified: boolean;
   isApproved?: boolean; // For alumni
 }
@@ -14,7 +14,7 @@ export interface AlumniRequest {
   alumniEmail: string;
   professorId: string;
   professorEmail: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: "PENDING" | "APPROVED" | "REJECTED";
   createdAt: Date;
 }
 
@@ -24,10 +24,10 @@ export interface Assessment {
   description: string;
   questions: Question[];
   startTime: string; // ISO string format
-  endTime: string;   // ISO string format
+  endTime: string; // ISO string format
   createdBy: string;
   assignedStudents: string[];
-  status: 'SCHEDULED' | 'ONGOING' | 'COMPLETED';
+  status: "SCHEDULED" | "ONGOING" | "COMPLETED";
   durationMinutes?: number;
   allowLateSubmission?: boolean;
 }
@@ -50,7 +50,7 @@ export interface ChatMessage {
 export interface AIRoadmap {
   domain: string;
   timeframe: string;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  difficulty: "EASY" | "MEDIUM" | "HARD";
   roadmap: string[];
 }
 
@@ -61,4 +61,37 @@ export interface AssessmentResult {
   answers: number[];
   score: number;
   completedAt: Date;
+}
+
+export interface Task {
+  id: string;
+  studentId: string;
+  title: string;
+  description?: string;
+  startDateTime: string;
+  endDateTime: string;
+  status: "PENDING" | "ONGOING" | "COMPLETED";
+  priority: "LOW" | "MEDIUM" | "HIGH";
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  isOverdue: boolean;
+}
+
+export interface TaskStats {
+  pending: number;
+  ongoing: number;
+  completed: number;
+  overdue: number;
+}
+
+export interface ChatConversation {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  lastMessage?: string;
+  lastMessageTime?: Date;
+  unreadCount?: number;
+  isLastMessageFromMe?: boolean;
 }

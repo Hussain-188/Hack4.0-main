@@ -1,30 +1,32 @@
-import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { MessageCircle, BookOpen, Users, LogOut } from 'lucide-react';
-import ChatSection from '../common/ChatSection';
+import React, { useState } from "react";
+import { useAuth } from "../../contexts/AuthContext";
+import { MessageCircle, BookOpen, Users, LogOut } from "lucide-react";
+import ChatSection from "../common/ChatSection";
 
 const AlumniDashboard: React.FC = () => {
   const { user, logout } = useAuth();
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const [activeSection, setActiveSection] = useState("dashboard");
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: BookOpen },
-    { id: 'chat', label: 'Chat', icon: MessageCircle },
+    { id: "dashboard", label: "Dashboard", icon: BookOpen },
+    { id: "chat", label: "Messages", icon: MessageCircle },
   ];
 
   const renderContent = () => {
     switch (activeSection) {
-      case 'chat':
+      case "chat":
         return <ChatSection />;
       default:
         return (
           <div className="p-8">
             <div className="flex justify-between items-center mb-8">
               <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">
-              Welcome back, {user?.username}!
-            </h1>
-                <p className="text-gray-600 mt-2">Connect with students and share your professional experience</p>
+                <h1 className="text-3xl font-bold text-gray-900 mb-8">
+                  Welcome back, {user?.username}!
+                </h1>
+                <p className="text-gray-600 mt-2">
+                  Connect with students and share your professional experience
+                </p>
               </div>
               <button
                 onClick={logout}
@@ -34,34 +36,44 @@ const AlumniDashboard: React.FC = () => {
                 Logout
               </button>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
                 <div className="flex items-center">
                   <MessageCircle className="w-10 h-10 text-purple-500 mr-4" />
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Conversations</h3>
-                    <p className="text-gray-600">Connect with students and professors</p>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Conversations
+                    </h3>
+                    <p className="text-gray-600">
+                      Connect with students and professors
+                    </p>
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
                 <div className="flex items-center">
                   <Users className="w-10 h-10 text-blue-500 mr-4" />
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Community</h3>
-                    <p className="text-gray-600">Share your experience and knowledge</p>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Community
+                    </h3>
+                    <p className="text-gray-600">
+                      Share your experience and knowledge
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                Quick Actions
+              </h2>
               <div className="flex justify-center">
                 <button
-                  onClick={() => setActiveSection('chat')}
+                  onClick={() => setActiveSection("chat")}
                   className="p-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all"
                 >
                   <MessageCircle className="w-6 h-6 mx-auto mb-2" />
@@ -71,7 +83,9 @@ const AlumniDashboard: React.FC = () => {
             </div>
 
             <div className="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Alumni Portal Features</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                Alumni Portal Features
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
                 <div className="flex items-center">
                   <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
@@ -104,14 +118,16 @@ const AlumniDashboard: React.FC = () => {
           <h2 className="text-xl font-bold text-gray-900">SmartEval Alumni</h2>
           <p className="text-sm text-gray-600">{user?.email}</p>
         </div>
-        
+
         <nav className="mt-6">
           {menuItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveSection(item.id)}
               className={`w-full flex items-center px-6 py-3 text-left hover:bg-purple-50 transition-colors ${
-                activeSection === item.id ? 'bg-purple-50 border-r-2 border-purple-500 text-purple-600' : 'text-gray-700'
+                activeSection === item.id
+                  ? "bg-purple-50 border-r-2 border-purple-500 text-purple-600"
+                  : "text-gray-700"
               }`}
             >
               <item.icon className="w-5 h-5 mr-3" />
@@ -122,9 +138,7 @@ const AlumniDashboard: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1">
-        {renderContent()}
-      </div>
+      <div className="flex-1">{renderContent()}</div>
     </div>
   );
 };

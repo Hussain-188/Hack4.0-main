@@ -9,12 +9,14 @@ import {
   LogOut,
   Star,
   FileText,
+  CheckSquare,
 } from "lucide-react";
 import ChatSection from "../common/ChatSection";
 import AssessmentSection from "./AssessmentSection";
 import AIRoadmapSection from "./AIRoadmapSection";
 import AIPracticeSection from "./AIPracticeSection";
 import DocumentAnalysis from "./DocumentAnalysis";
+import TaskManagementSection from "./TaskManagementSection";
 import { assessmentAPI } from "../../services/api";
 import { Assessment, AssessmentResult } from "../../types";
 import toast from "react-hot-toast";
@@ -36,6 +38,7 @@ const StudentDashboard: React.FC = () => {
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: BookOpen },
     { id: "assessments", label: "Assessments", icon: Calendar },
+    { id: "tasks", label: "Task Management", icon: CheckSquare },
     { id: "ai-practice", label: "Practice & Learn", icon: Brain },
     { id: "ai-roadmap", label: "Roadmap", icon: Target },
     { id: "document-analysis", label: "Document Analysis", icon: FileText },
@@ -318,6 +321,8 @@ const StudentDashboard: React.FC = () => {
         return <ChatSection />;
       case "assessments":
         return <AssessmentSection />;
+      case "tasks":
+        return <TaskManagementSection />;
       case "ai-roadmap":
         return <AIRoadmapSection />;
       case "ai-practice":
