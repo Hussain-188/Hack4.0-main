@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import { User } from '../types';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import axios from "axios";
+import { User } from "../types";
 
 interface AuthContextType {
   user: User | null;
@@ -15,12 +15,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,19 +30,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    
-    if (savedToken && savedUser) {
+        const savedToken = localStorage.getItem("token");
+        const savedUser = localStorage.getItem("user");
+
+        console.log(
+          "Debug - AuthContext initialization - Token exists:",
+          !!savedToken
+        );
+        console.log(
+          "Debug - AuthContext initialization - User exists:",
+          !!savedUser
+        );
+
+        if (savedToken && savedUser) {
           // Verify token is still valid
-          axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-    }
+          axios.defaults.headers.common[
+            "Authorization"
+          ] = `Bearer ${savedToken}`;
+          setToken(savedToken);
+          setUser(JSON.parse(savedUser));
+          console.log(
+            "Debug - AuthContext - User and token restored from localStorage"
+          );
+        } else {
+          console.log("Debug - AuthContext - No saved credentials found");
+        }
       } catch (error) {
         // Token is invalid, clear storage
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        console.log(
+          "Debug - AuthContext - Error during initialization:",
+          error
+        );
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
       } finally {
         setLoading(false);
       }
@@ -52,17 +74,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = (userData: User, authToken: string) => {
     setUser(userData);
     setToken(authToken);
-    localStorage.setItem('token', authToken);
-    localStorage.setItem('user', JSON.stringify(userData));
-    axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+    localStorage.setItem("token", authToken);
+    localStorage.setItem("user", JSON.stringify(userData));
+    axios.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
   };
 
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    delete axios.defaults.headers.common['Authorization'];
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    delete axios.defaults.headers.common["Authorization"];
   };
 
   if (loading) {
@@ -83,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         login,
         logout,
-        isAuthenticated: !!token && !!user
+        isAuthenticated: !!token && !!user,
       }}
     >
       {children}
